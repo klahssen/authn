@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package authn.authz.v1;
+option go_package = "github.com/klahssen/authn/proto-gen/authz/apiv1";
+
+//import "google/protobuf/timestamp.proto";
+//import "google/protobuf/descriptor.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+message Identity {
+    string token=1;
+    string type=2;
+}
+
+//Req holds payload to check authorizations
+message Req {
+    Identity identity=1; 
+    string action=2; //verb
+    repeated string path=3;
+    string namespace=4;
+}
+
+message Resp {
+	bool authorized=1;
+}
+service AuthzAPI {
+    rpc Check(Req) returns (Resp);
+}

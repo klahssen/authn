@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package authn.accounts.v1;
+option go_package = "github.com/klahssen/authn/proto-gen/accounts/apiv1";
+
+//import "google/protobuf/timestamp.proto";
+//import "google/protobuf/descriptor.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+
+//AccountStatus is an authorization criteria
+enum AccountStatus {
+	CREATED=0; //when user signs up
+	ACTIVE=1; //when account is validated
+	LOCKED=2; //access (temporarly) disabled
+	INACTIVE=3; //user wants to close account -> can only access the website via a specific reactivation endpoint
+	DELETED=4; //user cant login and data for this user is not used/displayed anywhere (should remove all)
+}
+
+//Account(timestamps in seconds)
+message Account {
+	// `datastore:"-"`
+	string uid=1 [json_name="uid", (gogoproto.jsontag)="uid", (gogoproto.moretags) = "db:\"uid\""];
+	string email=3 [json_name="email", (gogoproto.jsontag)="email", (gogoproto.moretags) = "db:\"email\""];
+	string hash=4 [json_name="-", (gogoproto.jsontag)="-", (gogoproto.moretags) = "db:\"hash\""];
+	int64 created_at=5 [json_name="crea", (gogoproto.jsontag)="crea",  (gogoproto.moretags) = "db:\"crea\""];
+	int64 updated_at=6 [json_name="upd", (gogoproto.jsontag)="upd",  (gogoproto.moretags) = "db:\"upd\""];
+	repeated string roles=7 [json_name="roles", (gogoproto.jsontag)="roles",  (gogoproto.moretags) = "db:\"roles\""];
+	AccountStatus status=8 [json_name="status", (gogoproto.jsontag)="status",  (gogoproto.moretags) = "db:\"status\""];
+	string parent_account=9 [json_name="parent", (gogoproto.jsontag)="parent", (gogoproto.moretags) = "db:\"parent\""];
+}
+
+message Info {
+	string type=1 [json_name="type", (gogoproto.jsontag)="type", (gogoproto.moretags) = "db:\"type\""];
+	string uid=2 [json_name="uid", (gogoproto.jsontag)="uid", (gogoproto.moretags) = "db:\"uid\""];
+	AccountStatus status=3 [json_name="status", (gogoproto.jsontag)="status", (gogoproto.moretags) = "db:\"status\""];
+	repeated string roles=4 [json_name="roles", (gogoproto.jsontag)="roles", (gogoproto.moretags) = "db:\"roles\""];
+}
+
+message MultiAccounts {
+	repeated Account accounts=1 [json_name="accounts", (gogoproto.jsontag)="accounts", (gogoproto.moretags) = "db:\"accounts\""];
+}
+
+
+enum IDType {
+    UID=0;
+    EMAIL=1;
+}
+
+message AccountID {
+    string id=1; 
+    IDType type=2;//can be uid or email 
+}
+
+message AccountIDs {
+    repeated string ids=1; 
+    IDType type=2;//can be uid or email 
+}
+
+//AccountParams holds payload to create/update an Account
+message AccountParams {
+	string uid=1;
+	string email=2;
+    string pwd=3;
+    string parent=4;
+}
+
+//AccountPrivilege holds to add or remove a role from an account
+message AccountPrivileges {
+	string uid=1;
+	repeated string roles=2;
+	AccountStatus status=3;
+}
+
+//JwtAuthTokens holds authentication tokens
+message JwtAuthTokens {
+	string access=1;
+	string refresh=2;
+}
+
+//Credentials holds credentials to authenticate a user
+message Credentials {
+	string id=1;
+	string pwd=2;
+}
+
+
+message PutAccountParams {
+    string uid=1;
+    Account acct=2;
+}
+
+service AccountsAPI {
+	rpc Create(AccountParams) returns (AccountID);
+	rpc UpdateEmail(AccountParams) returns (AccountID);
+	rpc UpdatePassword(AccountParams) returns (AccountID);
+    rpc AddRoles(AccountPrivileges) returns (AccountID);
+    rpc RemoveRoles(AccountPrivileges) returns (AccountID);
+    rpc SetRoles(AccountPrivileges) returns (AccountID);
+	rpc UpdateStatus(AccountPrivileges) returns (AccountID);
+	rpc GetByUID(AccountID) returns (Account);
+	rpc Authn(Credentials) returns (JwtAuthTokens);
+}
+
+service AccountRepo {
+    rpc Insert(Account) returns (AccountID);
+	rpc Update(PutAccountParams) returns (AccountID);
+	rpc Get(AccountID) returns (Account);
+    rpc GetMulti(AccountIDs) returns (MultiAccounts);
+    rpc Delete(AccountID) returns (AccountID);
+    rpc DeleteMulti(AccountIDs) returns (AccountIDs);
+}
