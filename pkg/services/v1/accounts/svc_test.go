@@ -35,7 +35,7 @@ func getNewService() *Service {
 	return s
 }
 
-func getJwtHandler() jwt.Handler {
+func getJwtHandler() *TokensHandler {
 	pf := func() (int, []byte) {
 		keys := [][]byte{[]byte("abcdef"), []byte("ghijkl")}
 		l := len(keys)
@@ -59,19 +59,25 @@ func getJwtHandler() jwt.Handler {
 	cf := func(custom *pb.Info) error {
 		return nil
 	}
-
+	th := &TokensHandler{}
 	h, err := jwt.NewSimpleHandler("authn", "authn", "access", pf, kf, sf, cf, time.Minute*10)
 	if err != nil {
-		log.Fatalf("failed to get new simple jwt handler: %v", err)
+		log.Fatalf("failed to get new simple access jwt handler: %v", err)
 	}
-	return h
+	th.Access = h
+	h, err = jwt.NewSimpleHandler("authn", "authn", "refresh", pf, kf, sf, cf, time.Hour*24*3)
+	if err != nil {
+		log.Fatalf("failed to get new simple refresh jwt handler: %v", err)
+	}
+	th.Refresh = h
+	return th
 }
 func TestNew(t *testing.T) {
 	av := pb.DefaultValidator()
 	tests := []struct {
 		repo      pb.AccountRepoServer
 		validator *pb.AccountValidator
-		jwt       jwt.Handler
+		jwt       *TokensHandler
 		err       error
 	}{
 		{

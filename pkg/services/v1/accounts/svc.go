@@ -16,18 +16,18 @@ import (
 type Service struct {
 	datastore pb.AccountRepoServer
 	authz     authz.AuthzAPIServer
-	jwt       TokensHandler
+	jwt       *TokensHandler
 	validator *pb.AccountValidator
-	iss       string
 }
 
+//TokensHandler holds a handler for each type of token (Access and Refresh)
 type TokensHandler struct {
 	Access  jwt.Handler
 	Refresh jwt.Handler
 }
 
 //func New(datastore pb.AccountRepoServer) (pb.AccountsAPIServer, error) {
-func New(datastore pb.AccountRepoServer, authz authz.AuthzAPIServer, validator *pb.AccountValidator, jwt TokensHandler) (*Service, error) {
+func New(datastore pb.AccountRepoServer, authz authz.AuthzAPIServer, validator *pb.AccountValidator, jwt *TokensHandler) (*Service, error) {
 	if datastore == nil {
 		return nil, status.Error(codes.Internal, "datastore is nil")
 	}
@@ -268,8 +268,14 @@ func (s *Service) GetByUID(ctx context.Context, params *pb.AccountID) (*pb.Accou
 	if !resp.Authorized {
 		return nil, status.Error(codes.PermissionDenied, "permission denied")
 	}
-	return s.datastore.Get(ctx, params)
+	a, err := s.datastore.Get(ctx, params)
+	if err == nil && a != nil {
+		a.Uid = params.Id
+	}
+	return a, err
 }
+
+//Authn authenticates a user account from credentials and returns jwt tokens
 func (s *Service) Authn(ctx context.Context, params *pb.Credentials) (*pb.JwtAuthTokens, error) {
 	if params == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty payload")
@@ -281,6 +287,7 @@ func (s *Service) Authn(ctx context.Context, params *pb.Credentials) (*pb.JwtAut
 	if !s.validator.Authenticate(a, params.Pwd) {
 		return nil, status.Error(codes.Unauthenticated, "incorrect credentials")
 	}
+	custom := &pb.Info{Type: "user", Uid: params.Id, Status: a.Status, Roles: a.Roles}
 	accessToken, err := s.jwt.Access.Generate(custom, time.Now(), 0)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to generate access token")
