@@ -45,8 +45,5 @@ func CompareHashAndPassword(hash string, pwd []byte) bool {
 	// will be a string so we'll need to convert it to a byte slice
 	byteHash := []byte(hash)
 	err := bcrypt.CompareHashAndPassword(byteHash, pwd)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }

@@ -90,7 +90,7 @@ func TestNew(t *testing.T) {
 			getMockRepo(),
 			nil,
 			nil,
-			status.Error(codes.Internal, "datastore is nil"),
+			status.Error(codes.Internal, "jwt handler is nil"),
 		},
 		{
 			getMockRepo(),
