@@ -99,7 +99,7 @@ func TestNew(t *testing.T) {
 		{&AccountParams{Email: "abc@domain.com", Pwd: "abc"}, nil, getInvalidPwdErr(fmt.Errorf("invalid format"))},
 		{&AccountParams{Email: "abc@.com", Pwd: "abcdefghi"}, nil, getInvalidEmailErr(fmt.Errorf("invalid format"))},
 	}
-	av:= DefaultValidator()
+	av := DefaultValidator()
 	te := tester.NewT(t)
 	for ind, test := range tests {
 		acc, err := av.New(test.params)

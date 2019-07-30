@@ -48,9 +48,9 @@ func getJwtHandler() *TokensHandler {
 	kf := func(token *jwtgo.Token) (interface{}, error) {
 		switch token.Header["kid"] {
 		case "001":
-			return "abcdef", nil
+			return []byte("abcdef"), nil
 		default:
-			return "ghijkl", nil
+			return []byte("ghijkl"), nil
 		}
 	}
 	sf := func(claims *jwtgo.StandardClaims) error {

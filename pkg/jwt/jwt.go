@@ -8,9 +8,10 @@ import (
 	pb "github.com/klahssen/authn/proto-gen/accounts/apiv1"
 )
 
+//Handler handles JWT tokens generation and validation
 type Handler interface {
 	Generate(custom *pb.Info, t time.Time, delay time.Duration) (string, error)
-	Validate(token string) error
+	Validate(token string, dest interface{}) error
 }
 
 var (
@@ -18,6 +19,7 @@ var (
 	errFailedToGenerateJwtToken = fmt.Errorf("failed to generate token")
 )
 
+//AccessToken holds standard and custom claims
 type AccessToken struct {
 	Std    *jwt.StandardClaims `json:"claims"`
 	Custom *pb.Info            `json:"account_info"`
@@ -47,9 +49,9 @@ type SimpleHandler struct {
 }
 
 //KeyPicker is a function that returns a keyID (string) and signing key ([]byte)
-type KeyPicker func() (int, []byte)
+type KeyPicker func() (string, []byte)
 
-//NewHandler returns a new instance of Handler implementing the JWTHandler interface. issuer,audience and subject will be used when generating jwt.StandardClaims
+//NewSimpleHandler returns a new instance of Handler implementing the JWTHandler interface. issuer,audience and subject will be used when generating jwt.StandardClaims
 func NewSimpleHandler(issuer, audience, subject string, picker KeyPicker, keyFunc jwt.Keyfunc, stdFunc StdClaimsFunc, customFunc CustomClaimsFunc, validity time.Duration) (*SimpleHandler, error) {
 	if picker == nil {
 		return nil, fmt.Errorf("key picker is nil")
@@ -69,8 +71,12 @@ func NewSimpleHandler(issuer, audience, subject string, picker KeyPicker, keyFun
 	return &SimpleHandler{keyPicker: picker, keyFunc: keyFunc, stdFunc: stdFunc, customFunc: customFunc, validity: validity, issuer: issuer, audience: audience, subject: subject}, nil
 }
 
-func (h *SimpleHandler) Validate(token string) error {
-	c := &AccessToken{}
+//Validate a token string
+func (h *SimpleHandler) Validate(token string, dest interface{}) error {
+	c, ok := dest.(*AccessToken)
+	if !ok {
+		return fmt.Errorf("destination must be of type *AccessToken")
+	}
 	_, err := jwt.ParseWithClaims(token, c, h.keyFunc)
 	if err != nil {
 		return err
